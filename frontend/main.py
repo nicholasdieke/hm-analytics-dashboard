@@ -1,10 +1,9 @@
 import pandas as pd
 import requests
+import streamlit as st
 import streamlit_authenticator as stauth
 import yaml
 from yaml.loader import SafeLoader
-
-import streamlit as st
 
 with open('config.yaml') as file:
     config = yaml.load(file, Loader=SafeLoader)
@@ -19,7 +18,7 @@ authenticator = stauth.Authenticate(
 name, authentication_status, username = authenticator.login('Login', 'main')
 
 @st.cache_data
-def load_data(apiUrl):
+def load_data(apiUrl, limit):
     """
     Function to load data from an API endpoint and return a pandas DataFrame.
 
@@ -32,7 +31,7 @@ def load_data(apiUrl):
 
     data = pd.DataFrame()
     try:
-        response_json = requests.get(apiUrl, headers={"Authorization": "Bearer topsecretproject"}).json()
+        response_json = requests.get(apiUrl+"?limit="+str(limit), headers={"Authorization": "Bearer topsecretproject"}).json()
         data = pd.json_normalize(response_json['result'])
     except Exception as e:
         print(e)
@@ -46,18 +45,24 @@ if st.session_state["authentication_status"]:
 
     tab1, tab2, tab3 = st.tabs(["🧑‍🤝‍🧑 Customers", "👕 Articles", "🏢 Departments"])
 
-    result = load_data("http://0.0.0.0:8080/api/customers")
+    st.sidebar.title("🔍 Filters")
+    st.sidebar.header("Size")
+    dataset_records = st.sidebar.slider(
+        'Dataset Records', 2000, 20000, 6000, step=2000
+    )
+
+    result = load_data("http://0.0.0.0:8080/api/customers", dataset_records)
     if result.empty:
         st.write("There was an error loading the data.")
     else:
         # Creating customer df
-        customer_df = result.drop(columns=['Active.$numberDouble', 'FN.$numberDouble', 'fashion_news_frequency.$numberDouble', 'age.$numberDouble', 'club_member_status.$numberDouble']).rename(columns={'_id.$oid': '_id'})
+        customer_df = result.drop(columns=result.filter(regex='\$numberDouble').columns).rename(columns={'_id.$oid': '_id'})
         customer_df['Active'] = customer_df['Active'].fillna('None')
         customer_df['FN'] = customer_df['FN'].fillna('None')
         filt_customer_df = customer_df.copy()
 
         # Customer Sidebar Components
-        st.sidebar.title("🔍 Filters")
+   
         status_lst = customer_df['club_member_status'].unique()
         fashion_lst = customer_df['fashion_news_frequency'].unique()
         active_lst = customer_df['Active'].unique()
@@ -100,7 +105,7 @@ if st.session_state["authentication_status"]:
         filt_customer_df = customer_df.loc[customer_df['club_member_status'].isin(status_filtered_lst) & customer_df['fashion_news_frequency'].isin(fashion_filtered_lst) & customer_df['Active'].isin(active_filtered_lst) & customer_df['FN'].isin(fn_filtered_lst) & (customer_df['age']>=ages_filtered_lst[0]) & (customer_df['age']<=ages_filtered_lst[1]) ] 
 
         # Creating transaction df
-        transaction_df = load_data("http://0.0.0.0:8080/api/transactions")
+        transaction_df = load_data("http://0.0.0.0:8080/api/transactions", dataset_records)
 
         # Transactions Sidebar Components
         sales_channel_lst = transaction_df['sales_channel_id'].unique()
@@ -116,7 +121,7 @@ if st.session_state["authentication_status"]:
         filt_transaction_df = transaction_df.loc[transaction_df['sales_channel_id'].isin(sales_channel_filtered_lst) ] 
 
          # Creating article df
-        article_df = load_data("http://0.0.0.0:8080/api/articles")
+        article_df = load_data("http://0.0.0.0:8080/api/articles", dataset_records)
 
         # Merging dfs
         merged_df = filt_transaction_df[['customer_id', 'price', 'sales_channel_id']].merge(filt_customer_df[['customer_id', 'club_member_status', 'age']], on='customer_id', how='inner')
