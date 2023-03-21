@@ -1,0 +1,11 @@
+runtime: python
+service: api
+env: flex
+
+runtime_config:
+  python_version: 3
+
+entrypoint: gunicorn -b :$PORT main:app
+
+automatic_scaling:
+  max_num_instances: 1

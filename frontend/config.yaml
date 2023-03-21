@@ -1,0 +1,14 @@
+credentials:
+  usernames:
+    gustavo:
+      email: gustavo@gmail.com
+      name: Gustavo
+      password: $2b$12$cMmFSA7vxXkWAixw02SCIeCjPCJ.baVrVFQiKOEFscGNDM6wCiNoO # To be replaced with hashed password
+    pepe:
+      email: pepe@gmail.com
+      name: Pepe
+      password: $2b$12$cMmFSA7vxXkWAixw02SCIeCjPCJ.baVrVFQiKOEFscGNDM6wCiNoO # To be replaced with hashed password
+cookie:
+  expiry_days: 30
+  key: some_signature_key # Must be string
+  name: h&m_session

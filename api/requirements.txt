@@ -1,0 +1,6 @@
+flask
+gunicron==20.1.0
+flask-restx
+json
+pymongo
+bson.json_util
