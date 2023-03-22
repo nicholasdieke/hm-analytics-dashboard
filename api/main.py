@@ -1,9 +1,10 @@
 # import the necessary modules and libraries
 import json
 
-import bson.json_util as json_util
 import pymongo
+from bson import json_util
 from flask import Flask, jsonify, make_response, request
+from flask_cors import CORS, cross_origin
 from flask_restx import Api, Namespace, Resource, reqparse
 
 # used to authenticate access to the API
@@ -12,9 +13,10 @@ auth_db = {
 }
 
 # connection string to the MongoDB database
-user = ""
-passw = ""
-host = ""
+user = "" # to add
+passw = "" # to add
+host = "" # to add
+
 
 conn_str = "mongodb+srv://{0}:{1}@{2}/?retryWrites=true&w=majority".format(user, passw, host)
 
@@ -24,6 +26,7 @@ limit_parser.add_argument('limit', type=int, default=100)
 
 # create a Flask application instance and an API instance
 app = Flask(__name__)
+CORS(app)
 
 authorizations = {
     'Bearer Auth': {
@@ -64,8 +67,6 @@ class get_all_users(Resource):
              API endpoint that gets all the customers data (default limit of 100 items), 
              ''')
     def get(self):
-        args = limit_parser.parse_args()
-        limit = args['limit']
         return check_auth_get_data('customer')
     
 # create a namespace for the API. This namespace will contain the endpoints for accessing the data.
@@ -84,7 +85,9 @@ class get_all_articles(Resource):
              API endpoint that gets all the articles data (default limit of 100 items), 
              ''')
     def get(self):
-        return check_auth_get_data('article')
+        response = check_auth_get_data('article')
+        # response.headers.add('Access-Control-Allow-Origin', '*')
+        return response
 
 # create a namespace for the API. This namespace will contain the endpoints for accessing the data.
 transactions = Namespace(

@@ -5,6 +5,8 @@ import streamlit_authenticator as stauth
 import yaml
 from yaml.loader import SafeLoader
 
+api_url = '' # to add
+
 with open('config.yaml') as file:
     config = yaml.load(file, Loader=SafeLoader)
 
@@ -17,13 +19,13 @@ authenticator = stauth.Authenticate(
 
 name, authentication_status, username = authenticator.login('Login', 'main')
 
-@st.cache_data
-def load_data(apiUrl, limit):
+@st.experimental_memo
+def load_data(api, limit):
     """
     Function to load data from an API endpoint and return a pandas DataFrame.
 
     Args:
-    apiUrl (str): The API endpoint URL to retrieve data from.
+    api (str): The API endpoint URL to retrieve data from.
 
     Returns:
     Returns a pandas DataFrame containing the retrieved data.
@@ -31,7 +33,7 @@ def load_data(apiUrl, limit):
 
     data = pd.DataFrame()
     try:
-        response_json = requests.get(apiUrl+"?limit="+str(limit), headers={"Authorization": "Bearer topsecretproject"}).json()
+        response_json = requests.get(api+"?limit="+str(limit), headers={"Authorization": "Bearer topsecretproject"}).json()
         data = pd.json_normalize(response_json['result'])
     except Exception as e:
         print(e)
@@ -43,7 +45,7 @@ if st.session_state["authentication_status"]:
     st.title('🛍️ H&M Analytics')
     st.caption('Explore H&M\'s analytics with our powerful tool! With a range of valuable insights at your fingertips and a variety of filters available, you can quickly find the information you need to make informed decisions.')
 
-    tab1, tab2, tab3 = st.tabs(["🧑‍🤝‍🧑 Customers", "👕 Articles", "🏢 Departments"])
+    # tab1, tab2, tab3 = st.tabs(["🧑‍🤝‍🧑 Customers", "👕 Articles", "🏢 Departments"])
 
     st.sidebar.title("🔍 Filters")
     st.sidebar.header("Size")
@@ -51,7 +53,7 @@ if st.session_state["authentication_status"]:
         'Dataset Records', 2000, 20000, 6000, step=2000
     )
 
-    result = load_data("http://0.0.0.0:8080/api/customers", dataset_records)
+    result = load_data(api_url+"/api/customers", dataset_records)
     if result.empty:
         st.write("There was an error loading the data.")
     else:
@@ -105,7 +107,7 @@ if st.session_state["authentication_status"]:
         filt_customer_df = customer_df.loc[customer_df['club_member_status'].isin(status_filtered_lst) & customer_df['fashion_news_frequency'].isin(fashion_filtered_lst) & customer_df['Active'].isin(active_filtered_lst) & customer_df['FN'].isin(fn_filtered_lst) & (customer_df['age']>=ages_filtered_lst[0]) & (customer_df['age']<=ages_filtered_lst[1]) ] 
 
         # Creating transaction df
-        transaction_df = load_data("http://0.0.0.0:8080/api/transactions", dataset_records)
+        transaction_df = load_data(api_url+"/api/transactions", dataset_records)
 
         # Transactions Sidebar Components
         sales_channel_lst = transaction_df['sales_channel_id'].unique()
@@ -121,7 +123,7 @@ if st.session_state["authentication_status"]:
         filt_transaction_df = transaction_df.loc[transaction_df['sales_channel_id'].isin(sales_channel_filtered_lst) ] 
 
          # Creating article df
-        article_df = load_data("http://0.0.0.0:8080/api/articles", dataset_records)
+        article_df = load_data(api_url+"/api/articles", dataset_records)
 
         # Merging dfs
         merged_df = filt_transaction_df[['customer_id', 'price', 'sales_channel_id']].merge(filt_customer_df[['customer_id', 'club_member_status', 'age']], on='customer_id', how='inner')
@@ -132,77 +134,79 @@ if st.session_state["authentication_status"]:
         .sort_values(['count'], ascending=False)
         tot_sales = tot_sales.rename(columns={'count': 'Items_Sold', 'sum': 'Revenue'})
 
-        with tab1:  
-            st.subheader('📊 Customer Statistics')
+        # with tab1:  
+        st.subheader('📊 Customer Statistics')
 
-            col1, col2, col3, col4 = st.columns(4)
-            col1.metric('Customers', len(filt_customer_df))
-            col2.metric('Average Age', round(filt_customer_df['age'].mean(), 2))
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric('Customers', len(filt_customer_df))
+        col2.metric('Average Age', round(filt_customer_df['age'].mean(), 2))
 
-            active_count = filt_customer_df['Active'].value_counts()
-            if active_count.count() > 1:
-                col3.metric("% Active", ((active_count[1.0] / len(filt_customer_df['Active'])) * 100).round(2))
-            else:
-                col3.metric("% Active", '0')
+        active_count = filt_customer_df['Active'].value_counts()
+        if active_count.count() > 1:
+            col3.metric("% Active", ((active_count[1.0] / len(filt_customer_df['Active'])) * 100).round(2))
+        else:
+            col3.metric("% Active", '0')
 
-            fn_count = filt_customer_df['FN'].value_counts()
-            if fn_count.count() > 1:
-                col4.metric("% FN", ((fn_count[1.0] / len(filt_customer_df['FN'])) * 100).round(2))
-            else:
-                col4.metric("% FN", '0')
-
-
-            age_group_revenue = merged_df.groupby('age').agg({'price':'sum'}).sort_values(['price'], ascending=False).reset_index().rename(columns={'price': 'MoneySpent'})
-
-            st.write('')
-            st.write('')
-            st.subheader('💸 Spending by Age')
-            st.bar_chart(age_group_revenue.set_index('age')['MoneySpent'])
-
-            st.subheader('🧑‍🤝‍🧑 Customers')
-            st.write(filt_customer_df)
+        fn_count = filt_customer_df['FN'].value_counts()
+        if fn_count.count() > 1:
+            col4.metric("% FN", ((fn_count[1.0] / len(filt_customer_df['FN'])) * 100).round(2))
+        else:
+            col4.metric("% FN", '0')
 
 
-        with tab2:  
-            st.subheader('🏆 Best-performing Articles')
-            top_art_sold = tot_sales.sort_values(['Items_Sold'], ascending=False)[['colour_group_name', 'prod_name']]
-            top_art_rev = tot_sales.sort_values(['Revenue'], ascending=False)[['colour_group_name', 'prod_name']]
+        age_group_revenue = merged_df.groupby('age').agg({'price':'sum'}).sort_values(['price'], ascending=False).reset_index().rename(columns={'price': 'MoneySpent'})
 
-            # checking if their are values to display   
-            if top_art_rev.empty:
-                st.metric("Top Selling Article","No article information") 
-                st.metric("Top Revenue-Generating Article","No article information") 
-            else:
-                st.metric("Top Selling Article",top_art_sold['colour_group_name'].iloc[0]+" "+top_art_sold['prod_name'].iloc[0], help="This is the article with the most items sold.") 
-                st.metric("Top Revenue-Generating Article",top_art_rev['colour_group_name'].iloc[0]+" "+top_art_rev['prod_name'].iloc[0], help="This is the article that has generated the most revenue.")
-            
-            st.write('')
-            st.write('')
-            st.subheader('📈 All Articles')
-            st.bar_chart(tot_sales.set_index('prod_name')['Revenue'])
+        st.write('')
+        st.write('')
+        st.subheader('💸 Spending by Age')
+        st.bar_chart(age_group_revenue.set_index('age')['MoneySpent'])
+
+        st.subheader('🧑‍🤝‍🧑 Customers')
+        filt_customer_df['Active'] = filt_customer_df['Active'].astype(bytes)
+        filt_customer_df['FN'] = filt_customer_df['FN'].astype(bytes)
+        st.write(filt_customer_df)
 
 
-        with tab3:  
-            st.subheader('🏆 Best-performing Departments')
+        # with tab2:  
+        st.subheader('🏆 Best-performing Articles')
+        top_art_sold = tot_sales.sort_values(['Items_Sold'], ascending=False)[['colour_group_name', 'prod_name']]
+        top_art_rev = tot_sales.sort_values(['Revenue'], ascending=False)[['colour_group_name', 'prod_name']]
 
-            top_dep_sold = tot_sales.groupby('department_name').agg({'Items_Sold': "sum"}).sort_values(['Items_Sold'], ascending=False).reset_index()['department_name']
-            top_dep_rev = tot_sales.groupby('department_name').agg({'Revenue': 'sum'}).sort_values(['Revenue'], ascending=False).reset_index()['department_name']
+        # checking if their are values to display   
+        if top_art_rev.empty:
+            st.metric("Top Selling Article","No article information") 
+            st.metric("Top Revenue-Generating Article","No article information") 
+        else:
+            st.metric("Top Selling Article",top_art_sold['colour_group_name'].iloc[0]+" "+top_art_sold['prod_name'].iloc[0]) 
+            st.metric("Top Revenue-Generating Article",top_art_rev['colour_group_name'].iloc[0]+" "+top_art_rev['prod_name'].iloc[0])
+        
+        st.write('')
+        st.write('')
+        st.subheader('📈 All Articles')
+        st.bar_chart(tot_sales.set_index('prod_name')['Revenue'])
 
-            col5, col6 = st.columns(2)
 
-            # checking if their are values to display
-            if top_dep_rev.empty:
-                col5.metric("Top Selling Department","No department information") 
-                col6.metric("Top Revenue-Generating Department","No department information") 
-            else:
-                col5.metric("Top Selling Department",top_dep_sold.iloc[0], help="This is the department with the most items sold.") 
-                col6.metric("Top Revenue-Generating Department",top_dep_rev.iloc[0], help="This is the department that has generated the most revenue.")
+        # with tab3:  
+        st.subheader('🏆 Best-performing Departments')
 
-            st.write('')
-            st.write('')
-            st.subheader('📈 All Departments')
-            top_dep_rev_chart = tot_sales.groupby('department_name').agg({'Revenue': 'sum'}).sort_values(['Revenue'], ascending=False).reset_index()
-            st.bar_chart(top_dep_rev_chart.set_index('department_name')['Revenue'])
+        top_dep_sold = tot_sales.groupby('department_name').agg({'Items_Sold': "sum"}).sort_values(['Items_Sold'], ascending=False).reset_index()['department_name']
+        top_dep_rev = tot_sales.groupby('department_name').agg({'Revenue': 'sum'}).sort_values(['Revenue'], ascending=False).reset_index()['department_name']
+
+        col5, col6 = st.columns(2)
+
+        # checking if their are values to display
+        if top_dep_rev.empty:
+            col5.metric("Top Selling Department","No department information") 
+            col6.metric("Top Revenue-Generating Department","No department information") 
+        else:
+            col5.metric("Top Selling Department",top_dep_sold.iloc[0]) 
+            col6.metric("Top Revenue-Generating Department",top_dep_rev.iloc[0])
+
+        st.write('')
+        st.write('')
+        st.subheader('📈 All Departments')
+        top_dep_rev_chart = tot_sales.groupby('department_name').agg({'Revenue': 'sum'}).sort_values(['Revenue'], ascending=False).reset_index()
+        st.bar_chart(top_dep_rev_chart.set_index('department_name')['Revenue'])
 
 elif st.session_state["authentication_status"] == False:
     st.error('Username/password is incorrect')

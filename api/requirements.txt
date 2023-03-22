@@ -1,6 +1,6 @@
 flask
-gunicron==20.1.0
+gunicorn==20.1.0
 flask-restx
-json
-pymongo
-bson.json_util
+flask_cors
+pymongo==4.1.1
+dnspython

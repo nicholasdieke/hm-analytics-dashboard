@@ -1,6 +1,4 @@
 pandas
 requests
 streamlit_authenticator
-yaml
-yaml.loader
 streamlit
