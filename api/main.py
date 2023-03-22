@@ -4,7 +4,7 @@ import json
 import pymongo
 from bson import json_util
 from flask import Flask, jsonify, make_response, request
-from flask_cors import CORS, cross_origin
+from flask_cors import CORS
 from flask_restx import Api, Namespace, Resource, reqparse
 
 # used to authenticate access to the API
@@ -13,9 +13,9 @@ auth_db = {
 }
 
 # connection string to the MongoDB database
-user = "" # to add
-passw = "" # to add
-host = "" # to add
+user = ""
+passw = ""
+host = ""
 
 
 conn_str = "mongodb+srv://{0}:{1}@{2}/?retryWrites=true&w=majority".format(user, passw, host)
