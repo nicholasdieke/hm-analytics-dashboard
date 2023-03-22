@@ -2,3 +2,4 @@ pandas
 requests
 streamlit_authenticator
 streamlit
+altair

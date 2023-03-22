@@ -1,3 +1,4 @@
+import altair as alt
 import pandas as pd
 import requests
 import streamlit as st
@@ -45,8 +46,6 @@ if st.session_state["authentication_status"]:
     st.title('🛍️ H&M Analytics')
     st.caption('Explore H&M\'s analytics with our powerful tool! With a range of valuable insights at your fingertips and a variety of filters available, you can quickly find the information you need to make informed decisions.')
 
-    # tab1, tab2, tab3 = st.tabs(["🧑‍🤝‍🧑 Customers", "👕 Articles", "🏢 Departments"])
-
     st.sidebar.title("🔍 Filters")
     st.sidebar.header("Size")
     dataset_records = st.sidebar.slider(
@@ -64,7 +63,6 @@ if st.session_state["authentication_status"]:
         filt_customer_df = customer_df.copy()
 
         # Customer Sidebar Components
-   
         status_lst = customer_df['club_member_status'].unique()
         fashion_lst = customer_df['fashion_news_frequency'].unique()
         active_lst = customer_df['Active'].unique()
@@ -120,7 +118,7 @@ if st.session_state["authentication_status"]:
         )
 
         # Filtering transactions df
-        filt_transaction_df = transaction_df.loc[transaction_df['sales_channel_id'].isin(sales_channel_filtered_lst) ] 
+        filt_transaction_df = transaction_df.loc[transaction_df['sales_channel_id'].isin(sales_channel_filtered_lst)] 
 
          # Creating article df
         article_df = load_data(api_url+"/api/articles", dataset_records)
@@ -134,8 +132,8 @@ if st.session_state["authentication_status"]:
         .sort_values(['count'], ascending=False)
         tot_sales = tot_sales.rename(columns={'count': 'Items_Sold', 'sum': 'Revenue'})
 
-        # with tab1:  
-        st.subheader('📊 Customer Statistics')
+        
+        st.header('🧑‍🤝‍🧑 Customers')
 
         col1, col2, col3, col4 = st.columns(4)
         col1.metric('Customers', len(filt_customer_df))
@@ -156,38 +154,95 @@ if st.session_state["authentication_status"]:
 
         age_group_revenue = merged_df.groupby('age').agg({'price':'sum'}).sort_values(['price'], ascending=False).reset_index().rename(columns={'price': 'MoneySpent'})
 
-        st.write('')
-        st.write('')
         st.subheader('💸 Spending by Age')
         st.bar_chart(age_group_revenue.set_index('age')['MoneySpent'])
 
-        st.subheader('🧑‍🤝‍🧑 Customers')
-        filt_customer_df['Active'] = filt_customer_df['Active'].astype(bytes)
-        filt_customer_df['FN'] = filt_customer_df['FN'].astype(bytes)
-        st.write(filt_customer_df)
+        customer_spending = filt_transaction_df.merge(filt_customer_df, how='inner', on='customer_id').groupby('customer_id')
+        best_customers = customer_spending.agg({'price':'sum'}).reset_index().rename(columns={'price': 'MoneySpent'}).sort_values(['MoneySpent'], ascending=False).head(20)        
 
+        st.subheader('🧍 Best Customers')
+        # Create bar chart using Altair
+        bar_chart = alt.Chart(best_customers).mark_bar().encode(
+            x=alt.X('customer_id', sort=None),
+            y='MoneySpent'
+        )
 
-        # with tab2:  
-        st.subheader('🏆 Best-performing Articles')
-        top_art_sold = tot_sales.sort_values(['Items_Sold'], ascending=False)[['colour_group_name', 'prod_name']]
-        top_art_rev = tot_sales.sort_values(['Revenue'], ascending=False)[['colour_group_name', 'prod_name']]
+        # Set chart properties
+        bar_chart = bar_chart.properties(
+            width=600,
+            height=400,
+        )
 
         # checking if their are values to display   
-        if top_art_rev.empty:
-            st.metric("Top Selling Article","No article information") 
-            st.metric("Top Revenue-Generating Article","No article information") 
+        if best_customers.empty:
+            st.metric("🏆 Top Spender","No customer information") 
+            st.metric("💸 Amount","No customer information") 
         else:
-            st.metric("Top Selling Article",top_art_sold['colour_group_name'].iloc[0]+" "+top_art_sold['prod_name'].iloc[0]) 
-            st.metric("Top Revenue-Generating Article",top_art_rev['colour_group_name'].iloc[0]+" "+top_art_rev['prod_name'].iloc[0])
+            st.metric('🏆 Top Spender', best_customers['customer_id'].iloc[0])
+            st.metric('💸 Amount', best_customers['MoneySpent'].iloc[0])
+
+        st.altair_chart(bar_chart)
+
+
+        st.subheader('🌎 Geography')
+        geography = filt_customer_df.groupby('postal_code').agg({'age': ['count', 'mean']})['age'].sort_values('count', ascending=False).reset_index().rename(columns={'count': 'Customer_Count', 'mean': 'Mean_Age'}).head(20)
+         # Create bar chart using Altair
+        gep_bar_chart = alt.Chart(geography).mark_bar().encode(
+            x=alt.X('postal_code', sort=None),
+            y='Customer_Count'
+        )
+
+        # Set chart properties
+        gep_bar_chart = gep_bar_chart.properties(
+            width=600,
+            height=400,
+        )
+
+        if geography.empty:
+            st.metric('🏆 Postal Code with Most Customers', 'No postal code information')
+            st.metric('🧑‍🤝‍🧑 Amount', 'No postal code information')
+        else:
+            st.metric('🏆 Postal Code with Most Customers', geography['postal_code'].iloc[0])
+            st.metric('🧑‍🤝‍🧑 Amount', geography['Customer_Count'].iloc[0])
+
+        st.altair_chart(gep_bar_chart)
+
+        st.subheader('🧑‍🤝‍🧑 Customers Table')
+        st.write(filt_customer_df.drop(columns=['Active', 'FN']))
+
+
+        st.write('---')
+        st.write('')
+        st.header('👕 Articles')
+        top_art_sold = tot_sales.sort_values(['Items_Sold'], ascending=False)[['colour_group_name', 'prod_name']]
+        tot_sales = tot_sales.sort_values(['Revenue'], ascending=False)
+
+        # checking if their are values to display   
+        if tot_sales.empty:
+            st.metric("🏆 Top Selling Article","No article information") 
+            st.metric("🏆 Top Revenue-Generating Article","No article information") 
+        else:
+            st.metric("🏆 Top Selling Article",top_art_sold['colour_group_name'].iloc[0]+" "+top_art_sold['prod_name'].iloc[0]) 
+            st.metric("🏆 Top Revenue-Generating Article",tot_sales['colour_group_name'].iloc[0]+" "+tot_sales['prod_name'].iloc[0])
         
-        st.write('')
-        st.write('')
         st.subheader('📈 All Articles')
-        st.bar_chart(tot_sales.set_index('prod_name')['Revenue'])
+        # Create bar chart using Altair
+        article_bar_chart = alt.Chart(tot_sales).mark_bar().encode(
+            x=alt.X('prod_name', sort=None),
+            y='Revenue'
+        )
+
+        # Set chart properties
+        article_bar_chart = article_bar_chart.properties(
+            width=600,
+            height=400,
+        )
+        st.altair_chart(article_bar_chart)
 
 
-        # with tab3:  
-        st.subheader('🏆 Best-performing Departments')
+        st.write('---')
+        st.write('')
+        st.header('🏢 Departments')
 
         top_dep_sold = tot_sales.groupby('department_name').agg({'Items_Sold': "sum"}).sort_values(['Items_Sold'], ascending=False).reset_index()['department_name']
         top_dep_rev = tot_sales.groupby('department_name').agg({'Revenue': 'sum'}).sort_values(['Revenue'], ascending=False).reset_index()['department_name']
@@ -196,17 +251,29 @@ if st.session_state["authentication_status"]:
 
         # checking if their are values to display
         if top_dep_rev.empty:
-            col5.metric("Top Selling Department","No department information") 
-            col6.metric("Top Revenue-Generating Department","No department information") 
+            col5.metric("🏆 Top Selling Department","No department information") 
+            col6.metric("🏆 Top Revenue-Generating Department","No department information") 
         else:
-            col5.metric("Top Selling Department",top_dep_sold.iloc[0]) 
-            col6.metric("Top Revenue-Generating Department",top_dep_rev.iloc[0])
+            col5.metric("🏆 Top Selling Department",top_dep_sold.iloc[0]) 
+            col6.metric("🏆 Top Revenue-Generating Department",top_dep_rev.iloc[0])
 
-        st.write('')
-        st.write('')
         st.subheader('📈 All Departments')
         top_dep_rev_chart = tot_sales.groupby('department_name').agg({'Revenue': 'sum'}).sort_values(['Revenue'], ascending=False).reset_index()
-        st.bar_chart(top_dep_rev_chart.set_index('department_name')['Revenue'])
+
+        # Create bar chart using Altair
+        dep_bar_chart = alt.Chart(top_dep_rev_chart).mark_bar().encode(
+            x=alt.X('department_name', sort=None),
+            y='Revenue'
+        )
+
+        # Set chart properties
+        dep_bar_chart = dep_bar_chart.properties(
+            width=600,
+            height=400,
+        )
+        st.altair_chart(dep_bar_chart)
+
+        
 
 elif st.session_state["authentication_status"] == False:
     st.error('Username/password is incorrect')
