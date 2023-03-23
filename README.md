@@ -1,6 +1,8 @@
-# **Analytics Dashboard for H&M Data**
+# **📊🛍️ H&M Analytics Dashboard**
 
 I have built an analytics dashboard on a set of H&M data about customers, articles, and transactions. The dashboard provides valuable insights into the business by generating KPIs and graphs based on the datasets.
+
+![alt text](hm-screenshot.png "H&M Analytics Dashboard Screenshot")
 
 The structure of the project is as follows:
 
