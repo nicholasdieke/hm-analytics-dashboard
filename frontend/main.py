@@ -6,7 +6,7 @@ import streamlit_authenticator as stauth
 import yaml
 from yaml.loader import SafeLoader
 
-api_url = '' # to add
+api_url = 'http://0.0.0.0:8080' # change for GCP
 
 with open('config.yaml') as file:
     config = yaml.load(file, Loader=SafeLoader)
