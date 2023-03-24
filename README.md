@@ -114,3 +114,52 @@ The H&M Analytics Dashboard provides the following features:
 ---
 
 The frontend is protected by a login window. Users must log in in order to view the dashboard. To receive credentials, please contact me.
+
+
+
+&nbsp;
+
+# **💻 How to Run the App Locally**
+
+## Before running the app
+- Add the database information in the empty variables at the beginning of api/main.py. These will be given upon request.
+
+To run the app, follow these simple instructions:
+
+1. Clone this repository to your local machine.
+
+```console
+$ git clone https://github.com/nicholasdieke/hm-analytics-dashboard.git
+```
+
+2. Navigate to the project directory.
+
+3. Install the dependencies.
+
+```console
+$ pip install -r frontend/requirements.txt -r api/requirements.txt
+```
+
+4. Start the api server.
+
+```console
+$ python api/main.py
+```
+
+5. Open another terminal and navigate to the frontend directory. 
+
+```console
+$ cd frontend
+```
+
+6. Then, start the Streamlit app.
+
+```console
+$ streamlit run main.py
+```
+
+6. The browser should automatically open. If not, navigate to [http://localhost:8501](http://localhost:8501) to see the app in action!
+
+7. You can log in with details provided upon request.
+
+8. Have fun exploring!
