@@ -86,7 +86,6 @@ class get_all_articles(Resource):
              ''')
     def get(self):
         response = check_auth_get_data('article')
-        # response.headers.add('Access-Control-Allow-Origin', '*')
         return response
 
 # create a namespace for the API. This namespace will contain the endpoints for accessing the data.
