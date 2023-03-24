@@ -121,8 +121,7 @@ The frontend is protected by a login window. Users must log in in order to view 
 
 # **💻 How to Run the App Locally**
 
-## Before running the app
-- Add the database information in the empty variables at the beginning of api/main.py. These will be given upon request.
+> Before running the app: **Add the database information** in the empty variables at the beginning of api/main.py. These will be given upon request.
 
 To run the app, follow these simple instructions:
 
