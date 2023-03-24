@@ -34,11 +34,6 @@ The api requires the following Python modules to be installed:
 - _PyMongo_
 - _DNSpython_
 
-To install, nagivate to the api directory and run:
-
-```console
-$ pip install -r requirements.txt
-```
 
 ### **🎯 Endpoints**
 
@@ -91,12 +86,6 @@ The frontend requires the following Python modules to be installed:
 - _Streamlit_authenticator_
 - _Streamlit_
 - _Altair_
-
-To install, nagivate to the frontend directory and run:
-
-```console
-$ pip install -r requirements.txt
-```
 
 ### **🔥 Features**
 
